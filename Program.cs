@@ -1,26 +1,9 @@
 ﻿/*
-Описание/Пошаговая инструкция выполнения домашнего задания:
-Создайте новую команду /addtask
-Пользователь сможет добавлять задачи в список.
-После ввода команды /addtask, бот должен попросить ввести описание задачи.
-Сохраните задачу в список (или массив) и отобразите сообщение о том, что задача добавлена.
+ * Домашнее задание
+ * Обработка ошибок и валидация данных
+*/
 
-Создайте новую команду /showtasks
-При вводе команды /showtasks бот должен отобразить список всех добавленных задач.
-Если задачи ещё не добавлены, необходимо вывести сообщение о том, что список пуст.
-
-Создайте новую команду /removetask
-Бот должен позволить пользователю удалять задачи по номеру в списке.
-После ввода команды /removetask, бот должен отобразить список задач с номерами.
-Затем бот должен запросить у пользователя номер задачи для удаления и удалить выбранную задачу из списка.
-
-Модифицируйте команду /help
-Обновите команду /help, добавив к ней описание новых команд: /addtask, /showtasks и /removetask.
-
-Реализуйте обработку ошибок
-Если пользователь пытается удалить задачу, когда список пуст, программа должна уведомить его об этом.
-Также, если введён неверный номер задачи при удалении, бот должен уведомить об этом и попросить ввести корректный номер.
- */
+using System.Linq.Expressions;
 
 namespace hw_3;
 
@@ -29,26 +12,58 @@ class Program
     private static string? _userName  = "";
     private static bool _startComplete; 
     private static List<string> _task = new List<string>(); 
-
+    private static int _maxTaskCount;
+    private static int _lenghtTaskLimit;
     static void Main()
     {
-        RunBot();
+        
+        while (true)
+        {
+            try
+            {
+                if (_maxTaskCount == 0) GetMaxTaskCount();
+                if (_lenghtTaskLimit == 0) GetLenghtTaskLimit();
+                RunBot();
+                break;
+            }
+            catch (TaskCountLimitException ex)
+            {
+                PrintException(ex);
+            }     
+            catch (TaskLengthLimitException ex)
+            {
+                PrintException(ex);
+            }
+            catch (DuplicateTaskException ex)
+            {
+                PrintException(ex);  
+            }
+            catch (ArgumentException ex)
+            {
+                PrintException(ex);
+            }
+            catch (Exception ex)
+            {
+                PrintExceptionAll(ex);
+            }
+        }
     }
     
      private static void RunBot()
         {
-            PrintCommandWelcome();
-            PrintCommandList();
+            if (!_startComplete) PrintCommandWelcome();
+            PrintCommandList(_startComplete);  
             do
             {
                 Console.Write(">");
                 string? str = Console.ReadLine();
-                if (string.IsNullOrEmpty(str))
-                {
-                    Console.WriteLine("Команда не распознана.");
-                    PrintCommandList(_startComplete);
-                    continue;
-                }
+                ValidateString(str);
+                //if (string.IsNullOrEmpty(str))
+                //{
+                //    Console.WriteLine("Команда не распознана.");
+                //    PrintCommandList(_startComplete);
+                //    continue;
+                //}
                 
                 string userCommand = "";
                 if (str.IndexOf(' ') == -1)
@@ -177,11 +192,18 @@ class Program
 
         private static bool AddTask()
         {
+            if (_task.Count == _maxTaskCount)
+            {
+                throw new TaskCountLimitException(_maxTaskCount);
+            }
             Console.Write("Введите описание задачи: ");
-            //Console.Write(">");
             string? task = Console.ReadLine();
             if (!string.IsNullOrWhiteSpace(task))
-            {
+            {   
+                if (task.Length > _lenghtTaskLimit)
+                    throw new TaskLengthLimitException(task.Length,_lenghtTaskLimit);
+                if (_task.Contains(task))
+                    throw new DuplicateTaskException(task);
                 _task.Add(task);
                 Console.WriteLine("Задача добавлена");
                 return true;
@@ -234,6 +256,60 @@ class Program
                 {
                     Console.WriteLine("Задачи с номером {0} нет в списке", numberTask);
                 }
+            }
+        }
+
+        private static void PrintExceptionAll(Exception ex)
+        {
+            Console.WriteLine("\n=== Произошла непредвиденная ошибка ===");
+            Console.WriteLine($"Тип: {ex.GetType()}");
+            Console.WriteLine($"Сообщение: {ex.Message}");
+            Console.WriteLine($"Стек вызова: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine("\n=== Внутреннее исключение ===");
+                Console.WriteLine($"Тип: {ex.InnerException.GetType()}");
+                Console.WriteLine($"Сообщение: {ex.InnerException.Message}");
+                Console.WriteLine($"Стек вызова: {ex.InnerException.StackTrace}");
+            }
+        }
+
+        private static void PrintException(Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.WriteLine($"=== Исключение  {ex.GetType()} ===");
+            Console.WriteLine($"Сообщение: {ex.Message}");
+            Console.ResetColor();
+        } 
+        
+        private static void GetMaxTaskCount()
+        { 
+            Console.Write($"Введите максимальное количество задач: ");
+            string? str = Console.ReadLine();
+            _maxTaskCount = ParseAndValidateInt(str, 1,100);
+        }
+
+        private static void GetLenghtTaskLimit()
+        { 
+            Console.Write($"Введите максимально доступную длину задачи: ");
+            string? str = Console.ReadLine();
+            _lenghtTaskLimit = ParseAndValidateInt(str, 1,100);
+        }
+        
+        private static int ParseAndValidateInt(string? str, int min, int max)
+        {
+            if (int.TryParse(str, out int maxTaskCount) && !(maxTaskCount >= 1 & maxTaskCount <= 100))
+            {
+                throw new ArgumentException($"Значение должно быть от {min} до {max}", nameof(str));
+            }
+          return maxTaskCount; 
+        }
+
+        private static void ValidateString(string? str)
+        {
+            if (str == null || str.Length == 0)
+            {
+                throw new ArgumentException("Введена пустая строка");
             }
         }
 }
