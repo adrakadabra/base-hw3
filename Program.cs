@@ -1,8 +1,9 @@
 ﻿/*
  * Домашнее задание
  * Обработка ошибок и валидация данных
-*/
-
+ */
+using Otus.ToDoList.ConsoleBot;
+using Otus.ToDoList.ConsoleBot.Types;
 using System.Linq.Expressions;
 
 namespace hw_3;
@@ -15,14 +16,21 @@ class Program
     private static int _maxTaskCount;
     private static int _lenghtTaskLimit;
     static void Main()
-    {
+    { 
+        var handler = new UpdateHandler(new UserService());
+        GetMaxTaskCount(handler.ToDoService);
+        GetLenghtTaskLimit(handler.ToDoService);
+        
+        
+        var botClient = new ConsoleBotClient();
+        botClient.StartReceiving(handler);
         
         while (true)
         {
             try
             {
-                if (_maxTaskCount == 0) GetMaxTaskCount();
-                if (_lenghtTaskLimit == 0) GetLenghtTaskLimit();
+            //    if (_maxTaskCount == 0) GetMaxTaskCount();
+            //    if (_lenghtTaskLimit == 0) GetLenghtTaskLimit();
                 RunBot();
                 break;
             }
@@ -282,18 +290,18 @@ class Program
             Console.ResetColor();
         } 
         
-        private static void GetMaxTaskCount()
+        private static void GetMaxTaskCount(IToDoService toDoService)
         { 
             Console.Write($"Введите максимальное количество задач: ");
             string? str = Console.ReadLine();
-            _maxTaskCount = ParseAndValidateInt(str, 1,100);
+            toDoService.MaxTaskCount = ParseAndValidateInt(str, 1,100);
         }
 
-        private static void GetLenghtTaskLimit()
+        private static void GetLenghtTaskLimit(IToDoService toDoService)
         { 
             Console.Write($"Введите максимально доступную длину задачи: ");
             string? str = Console.ReadLine();
-            _lenghtTaskLimit = ParseAndValidateInt(str, 1,100);
+            toDoService.LenghtTaskLimit = ParseAndValidateInt(str, 1,100);
         }
         
         private static int ParseAndValidateInt(string? str, int min, int max)
