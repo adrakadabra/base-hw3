@@ -5,9 +5,14 @@ public class ToDoService : IToDoService
     private readonly Dictionary<Guid, List<ToDoItem>> _toDoItems = new();
     private readonly Dictionary<Guid, ToDoItem> _toDoItemById =new();  //для поиска по ид задачи
 
-    public int MaxTaskCount { get; set; }
-    public int LenghtTaskLimit {get; set;}
+    private readonly int _lenghtTaskLimit;
+    private readonly int _maxTaskCount;
     
+    public ToDoService(int maxTaskCount, int lenghtTaskLimit)
+    {
+        _maxTaskCount = maxTaskCount;
+        _lenghtTaskLimit = lenghtTaskLimit;
+    }
     public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
     {
         if (_toDoItems.TryGetValue(userId, out var items))
@@ -32,13 +37,18 @@ public class ToDoService : IToDoService
     {
         var toDoItem = new ToDoItem(name, user);
         var userId = user.UserId;
+        
         if (_toDoItems.TryGetValue(user.UserId, out var items)) //есть ид пользователя 
         {
+            validateTask(items, name);
+            
             items.Add(toDoItem);
         }
         else
         {
             var item = new List<ToDoItem> { toDoItem };
+            validateTask(new List<ToDoItem> {}, name);
+            
             _toDoItems[userId] = item;
         }
         //второй словарь для быстрого поиска _toDoItemById
@@ -69,6 +79,23 @@ public class ToDoService : IToDoService
                 }
             }
         }
+    }
+
+    private void validateTask(List<ToDoItem> items, string taskName)
+    {
+        //проверк на длину задачи
+        if (taskName.Length > _lenghtTaskLimit)
+            throw new TaskLengthLimitException(taskName.Length,_lenghtTaskLimit);
+        
+        //проверка на макс количество задач
+        if (items.Count == _maxTaskCount)
+        {
+            throw new TaskCountLimitException(_maxTaskCount);
+        }
+        
+        //проверка на дубли
+        if (items.Any(item => item.Name == taskName))
+            throw new DuplicateTaskException(taskName);
     }
 }
     

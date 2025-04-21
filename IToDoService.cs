@@ -2,9 +2,6 @@ namespace hw_3;
 
 public interface IToDoService
 {
-    public int MaxTaskCount { get; set; }
-    public int LenghtTaskLimit {get; set;}
-    
     IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId);
     //Возвращает ToDoItem для UserId со статусом Active
     IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId);
